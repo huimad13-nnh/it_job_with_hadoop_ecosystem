@@ -81,6 +81,7 @@ class CareerVietSpider(scrapy.Spider):
         company = first_text(response, [
             "div[class*='job'] a[class*='company']::text",
             ".tit_company::text",
+            "div[class*='company'] h2::text",
         ])
 
         job_location = first_text(response, [
@@ -90,55 +91,68 @@ class CareerVietSpider(scrapy.Spider):
         ])
 
         date_posted = first_text(response, [
-            ".box-info tr:nth-child(6) > td.content p::text",
-            ".tab-content div:nth-child(2) li:nth-child(1) p::text",
+            ".template-202-wrap .content tr:last-child .content p::text",
+            ".template02 .content  tr:nth-child(4) .content p::text",
+            ".template .content  tr:nth-last-child(2) .content p::text",
+            ".item-blue:nth-child(2) li:nth-child(1) p::text",
             ".table tr:nth-child(8) td.content p::text",
             ".table div:nth-child(1) tr:nth-child(3) td.content p::text",
         ])
 
         job_field = unique_list(
-            response.css(".tab-content div:nth-child(2) li:nth-child(2) p a::text").getall()
-            or response.css(".box-info tr:nth-child(1) > td.content a::text").getall()
-            or response.css(".table tr:nth-child(1) td.content a::text").getall()
+            response.css(".item-blue:nth-child(2) li:nth-child(2) p a::text").getall()
+            or response.css("div[class*='template'] .content tr:nth-child(1) .content a::text").getall()
             or response.css(".info-career li:nth-child(5) a::text").getall()
+            or response.css("#info-career-mb li:nth-child(3) a::text").getall()
         )
 
+
+
         job_type = first_text(response, [
-            ".tab-content div:nth-child(2) li:nth-child(3) p::text",
-            ".box-info tr:nth-child(3) td.content p::text",
-            ".table tr:nth-child(3) td.content p::text",
+            ".item-blue:nth-child(2) li:nth-child(3) p::text",
+            ".template .content  tr:nth-child(3) .content p::text",
+            "div[class*='template-'] .content tr:nth-child(3) td.content p::text",
         ])
 
         salary = first_text(response, [
-            ".tab-content div:nth-child(3) li:nth-child(1) > p::text",
-            ".box-info tr:nth-child(2) td.content strong::text",
-            ".box-info tr:nth-child(6) td.content p::text",
+            ".item-blue:nth-child(3) li:nth-child(1) > p::text",
+            "div[class*='template-'] .content .green strong::text",
+            "div[class*='template'] .content .green strong::text",
             ".info-career li:nth-child(3) div::text",
+            "#info-career-mb li:nth-child(6) span::text",
         ])
 
-        experience = first_text(response, [
-            ".template06 .detail-row:nth-child(2) li:last-child::text",
-            ".tab-content div:nth-child(3) li:nth-child(2) > p::text",
-            ".table tr:nth-child(6) td.content p::text",
-            ".box-info div:nth-child(2) > table > tbody > tr:nth-child(2) > td.content > p::text",
-            ".template-201 .detail-row:nth-child(3) li:nth-child(3)::text",
-            ".template-200 .detail-row:nth-child(3) li:nth-child(2)::text",
-        ])
+        count_list = response.css(".item-blue:nth-child(3) li p::text").getall()
+        if len(count_list) > 3:
+            experience = response.css(".item-blue:nth-child(3) li:nth-child(2) p::text").get()
+        else:
+            experience = first_text(response, [
+                ".template-16 .detail-row:nth-child(5) li:nth-child(2)::text",
+                ".template .content tr:nth-child(5) .content p::text",
+                "section.job-detail-content > div:nth-child(4) li:nth-child(2)::text",
+                ".template02 .detail-row:nth-child(2) p:nth-child(6)::text"
+                ".template-202-wrap .content tr:nth-child(6) .content p::text",
+                ".template-205-wrap .content div:nth-child(2) tr:nth-child(3) .content p::text",
+                ".template-201 .detail-row:nth-child(3) li:nth-child(3)::text",
+                ".template-200 .detail-row:nth-child(3) li:nth-child(2)::text",
+                ".template-200 .detail-row:nth-child(3) p:nth-child(2)::text",
+            ])
 
         pos = first_text(response, [
-            ".box-info tr:nth-child(4) td.content p::text",
-            ".tab-content div:nth-child(3) li:nth-child(3) > p::text",
-            ".box-info div:nth-child(2) > table > tbody > tr:nth-child(1) > td.content > p::text",
-            ".box-info tr:nth-child(5) td.content p::text",
+            ".template02 .content  tr:nth-child(5) .content p::text",
+            ".template .content  tr:nth-child(4) .content p::text",
+            ".item-blue:nth-child(3) li:nth-last-child(2)  > p::text",
+            ".template-205-wrap .content div:nth-child(2) tr:nth-child(2) .content p::text",
+            ".template-202-wrap .content tr:nth-child(5) .content p::text",
             ".info-career li:nth-child(2) div::text",
+            "#info-career-mb li:nth-child(2) span::text",
         ])
 
         deadline = first_text(response, [
-            ".box-info tr:nth-child(5) td.content p::text",
-            ".box-info div:nth-child(2) > table > tbody > tr:nth-child(3) > td.content > p::text",
-            ".box-info tr:nth-child(7) td.content p::text",
-            ".tab-content div:nth-child(3) li:nth-child(4) > p::text",
+            "div[class*='template'] .content .red::text",
+            ".item-blue:nth-child(3) li:last-child > p::text",
             ".info-career li:nth-child(4) div::text",
+            "#info-career-mb li:nth-child(7) span::text",
         ])
     
         yield {
