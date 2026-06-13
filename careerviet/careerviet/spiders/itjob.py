@@ -1,4 +1,5 @@
-import scrapy
+import scrapy  # type: ignore[import]
+import re
 
 
 def clean_text(value):
@@ -17,6 +18,24 @@ def first_text(response, selectors):
             return value
     return ""
 
+def get_first_experience(response):
+    for row in response.css(".detail-row"):
+        title = row.css("h2::text").get("")
+        if not title:
+            title = row.css("h3::text").get("")
+        if "yêu cầu công việc" not in title.lower():
+            continue
+        for value in row.css("li::text").getall():
+            value = " ".join(value.split()).strip()
+            if is_valid_experience(value):
+                print(f"Extracted experience from li: {value}")
+                return value
+        for value in row.css(" ::text").getall():
+            value = " ".join(value.split()).strip()
+            if is_valid_experience(value):
+                print(f"Extracted experience from ::text: {value}")
+                return value
+    return ""
 
 def unique_list(values):
     """Lấy danh sách các giá trị duy nhất từ danh sách đầu vào."""
@@ -27,6 +46,13 @@ def unique_list(values):
             result.append(value)
     return result
 
+def is_valid_experience(value):
+    has_digit = any(char.isdigit() for char in value)
+    value_lower = value.lower()
+    has_keyword = "experience" in value_lower or "kinh nghiệm" in value_lower
+    if (has_digit and has_keyword) or (has_keyword and not has_digit):
+        return True
+    return False
 
 class CareerVietSpider(scrapy.Spider):
     name = "careerviet"
@@ -54,7 +80,7 @@ class CareerVietSpider(scrapy.Spider):
         current_page = response.meta.get("page", 1)
         print(f"Crawling page {current_page}...")
         # Giới hạn số trang cần crawl
-        if current_page < 5:
+        if current_page < 24:  # Thay đổi số trang tối đa tùy theo nhu cầu
             next_page = current_page + 1
 
             # Tạo URL cho trang tiếp theo dựa trên mẫu URL của trang hiện tại
@@ -78,11 +104,11 @@ class CareerVietSpider(scrapy.Spider):
             "div[class*='job'] h2::text",
         ])
 
-        company = first_text(response, [
-            "div[class*='job'] a[class*='company']::text",
-            ".tit_company::text",
-            "div[class*='company'] h2::text",
-        ])
+        company = unique_list(
+            response.css("div[class*='job'] a[class*='company']::text").getall()
+            or response.css(".tit_company::text").getall()
+            or response.css("div[class*='company'] h2::text").getall()
+        )
 
         job_location = first_text(response, [
             ".place::text",
@@ -127,19 +153,22 @@ class CareerVietSpider(scrapy.Spider):
             experience = response.css(".item-blue:nth-child(3) li:nth-child(2) p::text").get()
         else:
             experience = first_text(response, [
+                ".template02 .table:nth-child(2) tr:nth-child(2) .content p::text",
                 ".template-16 .detail-row:nth-child(5) li:nth-child(2)::text",
+                ".template01 tr:nth-child(6) .content p::text",
                 ".template .content tr:nth-child(5) .content p::text",
-                "section.job-detail-content > div:nth-child(4) li:nth-child(2)::text",
-                ".template02 .detail-row:nth-child(2) p:nth-child(6)::text"
                 ".template-202-wrap .content tr:nth-child(6) .content p::text",
                 ".template-205-wrap .content div:nth-child(2) tr:nth-child(3) .content p::text",
-                ".template-201 .detail-row:nth-child(3) li:nth-child(3)::text",
-                ".template-200 .detail-row:nth-child(3) li:nth-child(2)::text",
-                ".template-200 .detail-row:nth-child(3) p:nth-child(2)::text",
             ])
+        if re.search(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", experience):
+            experience = get_first_experience(response)
+        if not experience:
+            experience = get_first_experience(response)
+        print(f"Extracted experience: {experience}")
 
-        pos = first_text(response, [
-            ".template02 .content  tr:nth-child(5) .content p::text",
+        job_position = first_text(response, [
+            #".template02 .content  tr:nth-child(5) .content p::text",
+            ".template02 .table:nth-child(1)  tr:nth-child(3) .content p::text",
             ".template .content  tr:nth-child(4) .content p::text",
             ".item-blue:nth-child(3) li:nth-last-child(2)  > p::text",
             ".template-205-wrap .content div:nth-child(2) tr:nth-child(2) .content p::text",
@@ -165,7 +194,7 @@ class CareerVietSpider(scrapy.Spider):
             "job_type": job_type,
             "salary": salary,
             "experience": experience,
-            "pos": pos,
+            "job_position": job_position,
             "deadline": deadline,
             "job_url": response.url,
         }
